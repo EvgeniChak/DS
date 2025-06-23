@@ -6,7 +6,6 @@
 #include "config.h"
 #include "logger.h"
 #include "sensorData.h"
-
 #ifndef DISABLE_WIFI
 extern QueueHandle_t qJsonToNet;
 #endif
@@ -24,7 +23,35 @@ void ChargerFSM::begin() {
 void ChargerFSM::changeState(ChargeState newState) {
     state_ = newState;
     stateEntryMs_ = millis();
-    DEBUG_F("FSM → %d", static_cast<int>(state_));
+    Serial.printf("FSM → %s\n", getChargeStateName(state_));
+}
+
+
+const char *getChargeStateName(ChargeState state) {
+    switch (state) {
+        case ChargeState::STANDBY:
+            return "STANDBY";
+        case ChargeState::CHARGING:
+            return "CHARGING";
+        case ChargeState::PRECHARGE:
+            return "PRECHARGE";
+        case ChargeState::CC:
+            return "CC";
+        case ChargeState::CV:
+            return "CV";
+        case ChargeState::CHARGED:
+            return "CHARGED";
+        case ChargeState::ERROR:
+            return "ERROR";
+        case ChargeState::EMERGENCY_STOP:
+            return "EMERGENCY_STOP";
+        case ChargeState::BAD_CONNECTION:
+            return "BAD_CONNECTION";
+        case ChargeState::CHECK_CONNECTION:
+            return "CHECK_CONNECTION";
+        default:
+            return "UNKNOWN";
+    }
 }
 
 void ChargerFSM::updateTemperatureData(const SensorData &s) {

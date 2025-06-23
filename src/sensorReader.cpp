@@ -42,6 +42,7 @@ void SensorReader::update() {
     DEBUG_F("TempNeg: %f", data_.tempNeg);
     DEBUG_F("TempPos: %f", data_.tempPos);
     DEBUG_F("MillisTs: %d", data_.millisTs);
+    Serial.printf("FSM → %s\n", getChargeStateName(state_));
 }
 
 float SensorReader::readVoltage(uint8_t pin) {

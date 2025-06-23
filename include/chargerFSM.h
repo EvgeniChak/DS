@@ -3,7 +3,9 @@
 
 #include <Arduino.h>
 
+#include "charge_state_utils.h"
 #include "sensorReader.h"
+
 
 enum class ChargeState : uint8_t {
     STANDBY,
@@ -92,4 +94,6 @@ private:
     void updateTemperatureData(const SensorData &s);
     bool hasTemperatureChanged();
 };
+
+const char *getChargeStateName(ChargeState state);
 #endif
