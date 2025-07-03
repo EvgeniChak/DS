@@ -18,7 +18,7 @@
 #define PIN_TEMP_POS 39
 #define PIN_RELAY1 25  // Relay 1 (HIGH = ON)
 #define PIN_RELAY2 18
-#define PIN_LED_STRIP 27
+#define PIN_LED_STRIP 22
 
 #else
 #define PIN_VDIV1 12         // Voltage divider #1 (ADC1_CH4)
@@ -33,10 +33,10 @@
 #define PIN_LED_STRIP 11
 #endif
 
-#define LED_COUNT 16
+#define LED_COUNT 8
 
 /* ---------- ADC calibration ---------- */
-#define ADC_REF_V 3.30f
+#define ADC_REF_V 3.278f
 #define ADC_FULL_SCALE 4095.0f
 #define VDIV_RATIO 0.090909f  // 100 k / (1.1 M + 100 k) ≈ 1/11
 #define CURRENT_KA 0.026f     // 26 mV/A for ACS712‑20 A

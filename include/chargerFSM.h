@@ -3,9 +3,7 @@
 
 #include <Arduino.h>
 
-#include "charge_state_utils.h"
 #include "sensorReader.h"
-
 
 enum class ChargeState : uint8_t {
     STANDBY,
@@ -14,6 +12,7 @@ enum class ChargeState : uint8_t {
     CC,
     CV,
     CHARGED,
+    DISCONNECTED,
     ERROR,
     EMERGENCY_STOP,
     BAD_CONNECTION,
@@ -86,14 +85,14 @@ private:
     static constexpr float BAD_CONNECTION_VOLTAGE = 40.0f;
     static constexpr float CURRENT_THRESHOLD_ROBOT_ON = 2.0f;
     static constexpr float CURRENT_THRESHOLD_ROBOT_OFF = 1.5f;
+    static constexpr uint32_t CHECK_CONNECTION_DELAY_MS = 1000;
 
     void changeState(ChargeState newState);
+    void manageRelays(const SensorData &s);
     bool checkTemperature();
     bool checkConnectionQuality(const SensorData &s);
     bool checkCurrentFlow(const SensorData &s);
     void updateTemperatureData(const SensorData &s);
     bool hasTemperatureChanged();
 };
-
-const char *getChargeStateName(ChargeState state);
 #endif

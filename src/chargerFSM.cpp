@@ -6,6 +6,7 @@
 #include "config.h"
 #include "logger.h"
 #include "sensorData.h"
+
 #ifndef DISABLE_WIFI
 extern QueueHandle_t qJsonToNet;
 #endif
@@ -21,37 +22,12 @@ void ChargerFSM::begin() {
 }
 
 void ChargerFSM::changeState(ChargeState newState) {
+    if (state_ == newState)
+        return;
+    DEBUG_F("FSM: %s → %s", chargeStateToString(state_),
+            chargeStateToString(newState));
     state_ = newState;
     stateEntryMs_ = millis();
-    Serial.printf("FSM → %s\n", getChargeStateName(state_));
-}
-
-
-const char *getChargeStateName(ChargeState state) {
-    switch (state) {
-        case ChargeState::STANDBY:
-            return "STANDBY";
-        case ChargeState::CHARGING:
-            return "CHARGING";
-        case ChargeState::PRECHARGE:
-            return "PRECHARGE";
-        case ChargeState::CC:
-            return "CC";
-        case ChargeState::CV:
-            return "CV";
-        case ChargeState::CHARGED:
-            return "CHARGED";
-        case ChargeState::ERROR:
-            return "ERROR";
-        case ChargeState::EMERGENCY_STOP:
-            return "EMERGENCY_STOP";
-        case ChargeState::BAD_CONNECTION:
-            return "BAD_CONNECTION";
-        case ChargeState::CHECK_CONNECTION:
-            return "CHECK_CONNECTION";
-        default:
-            return "UNKNOWN";
-    }
 }
 
 void ChargerFSM::updateTemperatureData(const SensorData &s) {
@@ -99,14 +75,40 @@ bool ChargerFSM::checkConnectionQuality(const SensorData &s) {
 bool ChargerFSM::checkCurrentFlow(const SensorData &s) {
     float currentThreshold =
         robotOn_ ? CURRENT_THRESHOLD_ROBOT_ON : CURRENT_THRESHOLD_ROBOT_OFF;
-    return s.current < currentThreshold && s.current > I_CUTOFF;
+    //   return s.current < currentThreshold && s.current > I_CUTOFF;
+    if (s.current < currentThreshold) {
+        return true;
+    } else if (s.current < I_CUTOFF) {
+        return true;
+    } else
+        return false;
+}
+
+void ChargerFSM::manageRelays(const SensorData &s) {
+    if (state_ == ChargeState::CHARGING) {
+        if (s.voltageContacts > 1.0f) {
+            digitalWrite(PIN_RELAY1, HIGH);
+            digitalWrite(PIN_RELAY2, LOW);
+        } else if (s.voltageSocket > 1.0f) {
+            digitalWrite(PIN_RELAY1, LOW);
+            digitalWrite(PIN_RELAY2, HIGH);
+        } else {
+            digitalWrite(PIN_RELAY1, LOW);
+            digitalWrite(PIN_RELAY2, LOW);
+        }
+    } else {
+        digitalWrite(PIN_RELAY1, LOW);
+        digitalWrite(PIN_RELAY2, LOW);
+    }
 }
 
 void ChargerFSM::update(const SensorData &s) {
+    // Управление реле в соответствии с текущим состоянием
+    manageRelays(s);
+
     // Обновление данных о температуре
     updateTemperatureData(s);
 
-    // Проверка соединения
     bool nowConnected = (s.voltage > V_CONNECTED_MIN);
     if (nowConnected && !connected_) {
         connectionTimeMs_ = 0;
@@ -116,15 +118,14 @@ void ChargerFSM::update(const SensorData &s) {
         changeState(ChargeState::STANDBY);
     }
 
-    // Обновление времени
     uint32_t dt = millis() - stateEntryMs_;
-    if (connected_)
+    if (connected_) {
         connectionTimeMs_ += dt;
-    if (isCharging())
+    }
+    if (isCharging()) {
         chargingTimeMs_ += dt;
-    stateEntryMs_ = millis();
+    }
 
-    // Проверка аварийных ситуаций
     if (checkTemperature()) {
         emergencyStatus_ = EmergencyStatus::TEMPERATURE_PROBLEM;
         changeState(ChargeState::EMERGENCY_STOP);
@@ -143,7 +144,6 @@ void ChargerFSM::update(const SensorData &s) {
         return;
     }
 
-    // Основная логика состояний
     switch (state_) {
         case ChargeState::STANDBY:
             if (s.voltage > V_CONNECTED_MIN) {
@@ -152,21 +152,31 @@ void ChargerFSM::update(const SensorData &s) {
             break;
 
         case ChargeState::CHECK_CONNECTION:
-            if (s.voltage > V_CONNECTED_MIN) {
-                robotOn_ = s.current > CURRENT_THRESHOLD_ROBOT_ON;
+            if (s.voltage <= V_CONNECTED_MIN) {
+                changeState(ChargeState::STANDBY);
+                break;
+            } else if (s.voltage > V_CONNECTED_MIN)
                 changeState(ChargeState::CHARGING);
-            } else {
+            break;
+
+        case ChargeState::CHARGING:
+
+            if (millis() - stateEntryMs_ > CHECK_CONNECTION_DELAY_MS) {
+                if (checkCurrentFlow(s)) {
+                    changeState(ChargeState::CHARGED);
+                }
+            }
+            if (s.voltage <= V_CONNECTED_MIN) {
+                changeState(ChargeState::DISCONNECTED);
+            }
+
+        case ChargeState::CHARGED:
+            if (!connected_) {
                 changeState(ChargeState::STANDBY);
             }
             break;
 
-        case ChargeState::CHARGING:
-            if (checkCurrentFlow(s)) {
-                changeState(ChargeState::CHARGED);
-            }
-            break;
-
-        case ChargeState::CHARGED:
+        case ChargeState::DISCONNECTED:
             if (!connected_) {
                 changeState(ChargeState::STANDBY);
             }

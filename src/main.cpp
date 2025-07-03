@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <esp_bt.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
@@ -16,6 +17,7 @@
 #endif
 
 extern void taskNetwork(void *);
+void disableBluetooth();
 
 #ifndef DISABLE_WIFI
 State currentState = INIT;
@@ -34,7 +36,7 @@ QueueHandle_t qJsonToNet = nullptr;
 void taskSensor(void *) {
     gSensors.begin();
     for (;;) {
-        gSensors.update();
+        gSensors.update(gFSM.state());
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
@@ -42,7 +44,7 @@ void taskSensor(void *) {
 void taskFSM(void *) {
     gFSM.begin();
     for (;;) {
-        gFSM.update(gSensors.get());
+        gFSM.update(gSensors.getData());
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
@@ -50,8 +52,8 @@ void taskFSM(void *) {
 void taskLED(void *) {
     gLED.begin();
     for (;;) {
-        gNetLED.loop();
-        gNetLED.update(gFSM.state());
+        gLED.loop();
+        gLED.update(gFSM.state());
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
@@ -67,16 +69,16 @@ void setup() {
     DEBUG_INFO(F("Configuring pins..."));
     pinMode(PIN_RELAY1, OUTPUT);
     pinMode(PIN_RELAY2, OUTPUT);
-    pinMode(PIN_LED_STRIP, OUTPUT);
+    // pinMode(PIN_LED_STRIP, OUTPUT);
     pinMode(PIN_VDIV1, INPUT);
     pinMode(PIN_VDIV2, INPUT);
     pinMode(PIN_CURRENT, INPUT);
     pinMode(PIN_TEMP_AMBIENT, INPUT);
-   // pinMode(PIN_TEMP_DC, INPUT);
+    // pinMode(PIN_TEMP_DC, INPUT);
     pinMode(PIN_TEMP_NEG, INPUT);
     pinMode(PIN_TEMP_POS, INPUT);
     DEBUG_INFO(F("Pins configured"));
-
+    analogReadResolution(12);
     digitalWrite(PIN_RELAY1, LOW);
     digitalWrite(PIN_RELAY2, LOW);
     DEBUG_INFO(F("Relays set to LOW"));

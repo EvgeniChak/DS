@@ -18,11 +18,19 @@ static inline const char* chargeStateToString(ChargeState s) {
             return "CV";
         case ChargeState::CHARGED:
             return "CHARGED";
+        case ChargeState::DISCONNECTED:
+            return "DISCONNECTED";
         case ChargeState::ERROR:
             return "ERROR";
+        case ChargeState::EMERGENCY_STOP:
+            return "EMERGENCY_STOP";
+        case ChargeState::BAD_CONNECTION:
+            return "BAD_CONNECTION";
+        case ChargeState::CHECK_CONNECTION:
+            return "CHECK_CONNECTION";
         default:
             return "UNKNOWN";
     }
 }
 
-#endif // CHARGE_STATE_UTILS_H
+#endif  // CHARGE_STATE_UTILS_H

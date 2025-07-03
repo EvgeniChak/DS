@@ -2,15 +2,19 @@
 #define SENSOR_READER_H
 
 #include <Arduino.h>
-#include "sensorData.h"
+
 #include <array>
 
+#include "sensorData.h"
+#include "ChargerFSM.h"
+
+ enum class ChargeState : uint8_t;  // Forward declaration
 
 class SensorReader {
 public:
     void begin();
-    void update();
-    const SensorData &get() const {
+    void update(ChargeState currentState);
+    const SensorData &getData() {
         return data_;
     }
 

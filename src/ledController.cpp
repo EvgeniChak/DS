@@ -3,7 +3,7 @@
 #include "config.h"  // PIN_LED_STRIP
 
 void LedController::begin(uint8_t brightness) {
-    FastLED.addLeds<WS2812B, PIN_LED_STRIP, GRB>(leds_, LED_COUNT);
+    FastLED.addLeds<WS2812, PIN_LED_STRIP, RGB>(leds_, LED_COUNT);
     FastLED.setBrightness(brightness);
     setAll(CRGB::Black);
     FastLED.show();
@@ -17,20 +17,16 @@ void LedController::setAll(CRGB c) {
 
 void LedController::update(ChargeState st) {
     switch (st) {
+        case ChargeState::DISCONNECTED:
         case ChargeState::STANDBY:
             setAll(CRGB::Yellow);
             break;
+        case ChargeState::CHECK_CONNECTION:
         case ChargeState::CHARGING:
-            setAll(CRGB::Orange);
-            break;
-        case ChargeState::CC:
-            setAll(CRGB::Yellow);
-            break;
-        case ChargeState::CV:
-            setAll(CRGB::Green);
+            setAll(CRGB::Blue);
             break;
         case ChargeState::CHARGED:
-            setAll(CRGB::Blue);
+            setAll(CRGB::Green);
             break;
         case ChargeState::ERROR:
             setAll(CRGB::Red);
